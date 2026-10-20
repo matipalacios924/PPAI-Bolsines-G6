@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Inicio{% endblock %}
+{% block contenido %}
+<h1>Hola, {{ session.empleado.split(' ')[0] }}</h1>
+<p class="ayuda">¿Qué querés hacer hoy en {{ session.cm }}?</p>
+<div class="menu">
+  <a class="tarjeta opcion-menu destacada" href="{{ url_for('recepcion.opcion_registrar_recepcion_bolsin') }}">
+    <span class="opcion-icono">📥</span>
+    <strong>Registrar recepción de bolsín</strong>
+    <small>Controlá el contenido de un bolsín que llegó por correo y actualizá el estado de su documentación.</small>
+  </a>
+  <div class="tarjeta opcion-menu deshabilitada" aria-disabled="true">
+    <span class="opcion-icono">📦</span>
+    <strong>Generar bolsín</strong>
+    <small>Fuera del alcance de esta entrega.</small>
+  </div>
+  <div class="tarjeta opcion-menu deshabilitada" aria-disabled="true">
+    <span class="opcion-icono">🗺️</span>
+    <strong>Consultar seguimiento de bolsines</strong>
+    <small>Fuera del alcance de esta entrega.</small>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Recepción registrada{% endblock %}
+{% block pasos %}{% with paso_actual = 4 %}{% include "_pasos.html" %}{% endwith %}{% endblock %}
+{% block contenido %}
+<div class="exito tarjeta">
+  <span>✅</span>
+  <div>
+    <h1>Recepción registrada</h1>
+    <p>El bolsín <strong>N° {{ resultado.bolsin.numero }}</strong> quedó en estado
+       <strong>{{ resultado.estado_bolsin }}</strong> el {{ resultado.fecha_hora|fecha(true) }}.</p>
+  </div>
+</div>
+
+{% for r in resultado.remitos %}
+<section class="tarjeta remito">
+  <h2>Remito N° {{ r.numero }} <span class="estado">{{ r.estado }}</span></h2>
+  <table>
+    <thead><tr><th>N°</th><th>Asunto</th><th>Estado</th></tr></thead>
+    <tbody>
+      {% for d in r.documentacion %}
+      <tr><td>{{ d.numero }}</td><td>{{ d.asunto }}</td><td><span class="estado">{{ d.estado }}</span></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+
+<section class="tarjeta">
+  <h2>Notificaciones enviadas</h2>
+  {% for n in resultado.notificaciones %}
+  <details class="mail">
+    <summary>📧 {{ n.destinatario }} — {{ n.asunto }}</summary>
+    <pre>{{ n.cuerpo }}</pre>
+  </details>
+  {% else %}
+  <p class="ayuda">No se enviaron notificaciones.</p>
+  {% endfor %}
+</section>
+
+<div class="acciones">
+  <a class="boton boton-fantasma" href="{{ url_for('inicio') }}">Volver al inicio</a>
+  <a class="boton boton-primario" href="{{ url_for('recepcion.opcion_registrar_recepcion_bolsin') }}">Registrar otro bolsín</a>
+</div>
+{% endblock %}

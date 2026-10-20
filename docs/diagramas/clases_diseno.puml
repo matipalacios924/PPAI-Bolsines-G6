@@ -1,0 +1,237 @@
+@startuml clases_diseno
+title CU 28 Registrar recepción de bolsín - Vista estática de diseño (patrón State)
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide empty members
+
+class PantallaRecepcionBolsin <<boundary>> {
+  + opcionRegistrarRecepcionBolsin() : void
+  + mostrarBolsines() : void
+  + tomarSeleccionBolsin() : void
+  + mostrarContenido(errores : List<String>) : void
+  + tomarOpcionRecepcion() : void
+  + solicitarConfirmacion() : void
+  + tomarConfirmacion() : void
+  + cancelar() : void
+}
+
+class GestorRecepcionBolsin <<control>> {
+  - cmUsuarioLogueado : ComisionMedica
+  - empleadoLogueado : Empleado
+  - bolsinesEnviados : List<Bolsin>
+  - bolsinSeleccionado : Bolsin
+  - opcionRecepcion : int
+  - situaciones : Map<int, SituacionRecepcion>
+  - areas : Map<int, String>
+  - fechaHoraActual : DateTime
+  + nuevaRecepcionBolsin() : void
+  + buscarCMUsuarioLogueado() : String
+  + buscarBolsinesEnviados() : List<Bolsin>
+  + obtenerDatosBolsines(nroPrecinto : String, cmOrigenId : int) : List<Map>
+  + tomarSeleccionBolsin(bolsinId : int) : void
+  + buscarRemitosYDocumentacion() : List<Map>
+  + obtenerOpcionesRecepcion() : List<Map>
+  + tomarOpcionRecepcion(opcion : int, docs : List<int>, areas : Map<int, String>) : List<String>
+  + tomarConfirmacion(confirma : boolean) : Map
+  + registrarRecepcion() : void
+  + notificarRecepcion() : void
+  + obtenerFechaHoraActual() : DateTime
+  + finCU() : void
+}
+
+class InterfazNotificacion <<boundary>> {
+  + enviarNotificacion(destinatario : String, asunto : String, cuerpo : String) : Map
+}
+
+class Sesion {
+  - fechaHoraInicio : DateTime
+  - fechaHoraFin : DateTime
+  + obtenerEmpleado() : Empleado
+}
+class Usuario {
+  - nombre : String
+  - contrasenia : String
+  + getEmpleado() : Empleado
+}
+class Empleado {
+  - nombre : String
+  - apellido : String
+  - email : String
+  + getCM() : ComisionMedica
+  + getNombreCompleto() : String
+}
+class ComisionMedica {
+  - codigo : String
+  - nombre : String
+  - email : String
+  + getNombre() : String
+  + getEmail() : String
+  + esCentral() : boolean
+}
+
+class Bolsin {
+  - numeroBolsin : int
+  - numeroPrecinto : String
+  - fecha : Date
+  - peso : int
+  + esTuCMDestino(cm : ComisionMedica) : boolean
+  + estaEnviado() : boolean
+  + getNroPrecinto() : String
+  + getCMOrigen() : ComisionMedica
+  + obtenerRemitos() : List<Remito>
+  + recibir(estado : Estado, fechaHora : DateTime, responsable : Empleado) : void
+  - obtenerCambioEstadoActual() : CambioEstadoBolsin
+  - crearCambioEstadoBolsin(estado : Estado, fechaHora : DateTime, responsable : Empleado) : void
+}
+class CambioEstadoBolsin {
+  - fechaHoraInicio : DateTime
+  - fechaHoraFin : DateTime
+  + sosActual() : boolean
+  + sosEnviado() : boolean
+  + setFechaHoraFin(fechaHora : DateTime) : void
+}
+class Estado {
+  - ambito : String
+  - nombre : String
+  + esAmbitoBolsin() : boolean
+  + esAmbitoRemito() : boolean
+  + esEnviado() : boolean
+  + esRecibidoEnCMDestino() : boolean
+  + esRecibidoYAceptado() : boolean
+  + esRecibidoYAceptadoParcial() : boolean
+}
+class Remito {
+  - numero : int
+  - fecha : Date
+  + getNumero() : int
+  + buscarDocumentacion() : List<Documentacion>
+  + registrarRecepcion(situaciones : Map, areas : Map, fechaHora : DateTime, responsable : Empleado, estadoAceptado : Estado, estadoParcial : Estado) : void
+  + setEstado(estado : Estado) : void
+}
+class DetalleRemito {
+  - areaCMCDestino : String
+  + getDocumentacion() : Documentacion
+  + actualizarEstadoDoc(situacion : SituacionRecepcion, area : String, fechaHora : DateTime, responsable : Empleado) : void
+}
+
+class Documentacion <<Context>> {
+  - numero : int
+  - asunto : String
+  - fechaPase : Date
+  - estado : EstadoDocumentacion
+  + getAsunto() : String
+  + mostrarTipoDocumentacion() : String
+  + getCambiosEstado() : List<CambioEstadoDocumentacion>
+  + agregarCambioEstado(ce : CambioEstadoDocumentacion) : void
+  + setEstado(estado : EstadoDocumentacion) : void
+  + fueRecibidaCorrectamente() : boolean
+  + aceptar(fechaHora : DateTime, responsable : Empleado) : void
+  + asignarNoRecibida(fechaHora : DateTime, responsable : Empleado) : void
+  + rechazar(fechaHora : DateTime, responsable : Empleado) : void
+  + redirigir(fechaHora : DateTime, responsable : Empleado) : void
+}
+class TipoDocumento {
+  - nombre : String
+  + getNombre() : String
+}
+class CambioEstadoDocumentacion {
+  - fechaHoraInicio : DateTime
+  - fechaHoraFin : DateTime
+  + sosActual() : boolean
+  + setFechaHoraFin(fechaHora : DateTime) : void
+}
+
+abstract class EstadoDocumentacion <<State>> {
+  # nombre : String
+  + getNombre() : String
+  + esRecibidaCorrectamente() : boolean
+  + incluirEnRemito(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  + asignarABolsin(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  + comenzarTraslado(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  + aceptar(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  + asignarNoRecibida(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  + rechazar(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  + redirigir(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  + reasignar(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  + darDeBaja(doc : Documentacion, fh : DateTime, resp : Empleado) : void
+  # cambiarEstado(doc : Documentacion, proximo : EstadoDocumentacion, fh : DateTime, resp : Empleado) : void
+  # buscarCambioEstadoActual(doc : Documentacion) : CambioEstadoDocumentacion
+  # crearCambioEstado(estado : EstadoDocumentacion, fh : DateTime, resp : Empleado) : CambioEstadoDocumentacion
+}
+class Registrada <<ConcreteState>> {
+  + incluirEnRemito(...) : void
+  + darDeBaja(...) : void
+}
+class EnRemito <<ConcreteState>> {
+  + quitarDeRemito(...) : void
+  + asignarABolsin(...) : void
+}
+class EnBolsinSaliente <<ConcreteState>> {
+  + quitarDeBolsin(...) : void
+  + comenzarTraslado(...) : void
+}
+class EnBolsinEnviado <<ConcreteState>> {
+  + aceptar(...) : void
+  + asignarNoRecibida(...) : void
+  + rechazar(...) : void
+  + redirigir(...) : void
+}
+class ParaRedirigir <<ConcreteState>> {
+  + esRecibidaCorrectamente() : boolean
+  + aceptar(...) : void
+  + rechazar(...) : void
+}
+class RecibidaYAceptada <<ConcreteState>> {
+  + esRecibidaCorrectamente() : boolean
+}
+class NoRecibida <<ConcreteState>> {
+  + reasignar(...) : void
+  + darDeBaja(...) : void
+}
+class RecibidaYRechazada <<ConcreteState>> {
+  + reasignar(...) : void
+  + darDeBaja(...) : void
+}
+class DeBaja <<ConcreteState>>
+
+enum SituacionRecepcion {
+  ACEPTADA
+  NO_RECIBIDA
+  RECHAZADA
+  REDIRIGIR
+}
+
+PantallaRecepcionBolsin --> GestorRecepcionBolsin
+GestorRecepcionBolsin --> InterfazNotificacion
+GestorRecepcionBolsin --> Sesion : sesionActual
+GestorRecepcionBolsin --> "0..*" Bolsin : bolsinesEnviados
+GestorRecepcionBolsin ..> SituacionRecepcion
+Sesion --> "1" Usuario
+Usuario --> "1" Empleado
+Empleado --> "1" ComisionMedica : asignadoA
+Bolsin --> "1" ComisionMedica : origen
+Bolsin --> "1" ComisionMedica : destino
+Bolsin o--> "1..*" Remito : remito
+Bolsin *--> "1..*" CambioEstadoBolsin : cambioEstado
+CambioEstadoBolsin --> "1" Estado
+CambioEstadoBolsin --> "1" Empleado : responsableCE
+Remito --> "1" Estado
+Remito *--> "1..*" DetalleRemito
+DetalleRemito --> "1" Documentacion
+Documentacion --> "1" TipoDocumento
+Documentacion --> "1" ComisionMedica : cmOrigen
+Documentacion *--> "1..*" CambioEstadoDocumentacion : cambioEstado
+Documentacion --> "1" EstadoDocumentacion : estado
+CambioEstadoDocumentacion --> "1" EstadoDocumentacion : estado
+CambioEstadoDocumentacion --> "1" Empleado : responsableCE
+
+EstadoDocumentacion <|-- Registrada
+EstadoDocumentacion <|-- EnRemito
+EstadoDocumentacion <|-- EnBolsinSaliente
+EstadoDocumentacion <|-- EnBolsinEnviado
+EstadoDocumentacion <|-- ParaRedirigir
+EstadoDocumentacion <|-- RecibidaYAceptada
+EstadoDocumentacion <|-- NoRecibida
+EstadoDocumentacion <|-- RecibidaYRechazada
+EstadoDocumentacion <|-- DeBaja
+@enduml

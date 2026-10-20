@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titulo %}Confirmar recepción{% endblock %}
+{% block pasos %}{% with paso_actual = 3 %}{% include "_pasos.html" %}{% endwith %}{% endblock %}
+{% block contenido %}
+<h1>Confirmar recepción</h1>
+<div class="tarjeta confirmacion">
+  <p>Vas a registrar el bolsín <strong>N° {{ resumen.bolsin.numero }}</strong>
+     (precinto <strong>{{ resumen.bolsin.precinto }}</strong>) de
+     <strong>{{ resumen.bolsin.cm_origen }}</strong> como <strong>Recibido en CM destino</strong>.</p>
+  <p>Situación elegida: <em>{{ resumen.opcion }}</em></p>
+  <p class="ayuda">Responsable: {{ resumen.responsable }}</p>
+</div>
+
+{% for r in resumen.remitos %}
+<section class="tarjeta remito">
+  <h2>Remito N° {{ r.numero }}</h2>
+  <table>
+    <thead><tr><th>N°</th><th>Tipo</th><th>Asunto</th><th>Quedará como</th></tr></thead>
+    <tbody>
+      {% for d in r.documentacion %}
+      <tr>
+        <td>{{ d.numero }}</td>
+        <td><span class="chip">{{ d.tipo }}</span></td>
+        <td>{{ d.asunto }}</td>
+        <td>
+          <span class="estado estado-{{ d.situacion.name|lower }}">{{ d.situacion.value }}</span>
+          {% if d.area %}<small>→ {{ d.area }}</small>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+
+<form class="acciones" method="post">
+  <button class="boton boton-fantasma" type="submit" name="confirma" value="no">Volver y cambiar opción</button>
+  <button class="boton boton-primario" type="submit" name="confirma" value="si">Confirmar recepción</button>
+</form>
+{% endblock %}

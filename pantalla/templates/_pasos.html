@@ -1,0 +1,16 @@
+{% set pasos = ["Seleccionar bolsín", "Controlar contenido", "Confirmar", "Resultado"] %}
+<ol class="pasos" aria-label="Progreso de la recepción">
+  {% for nombre in pasos %}
+  <li class="{% if loop.index < paso_actual %}hecho{% elif loop.index == paso_actual %}actual{% endif %}"
+      {% if loop.index == paso_actual %}aria-current="step"{% endif %}>
+    <span class="paso-num">{% if loop.index < paso_actual %}✓{% else %}{{ loop.index }}{% endif %}</span>
+    {{ nombre }}
+  </li>
+  {% endfor %}
+</ol>
+{% if paso_actual < 4 %}
+<form class="cancelar" method="post" action="{{ url_for('recepcion.cancelar') }}"
+      onsubmit="return confirm('¿Desea cancelar el registro de la recepción? No se guardarán cambios.');">
+  <button class="boton boton-fantasma" type="submit">Cancelar recepción</button>
+</form>
+{% endif %}

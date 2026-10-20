@@ -1,20 +1,26 @@
-class Sesion:
-    def __init__(self, usuario, fecha_hora_inicio, fecha_hora_fin=None):
-        self.usuario = usuario
-        self.fecha_hora_inicio = fecha_hora_inicio
-        self.fecha_hora_fin = fecha_hora_fin
+from datetime import datetime
+
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from persistencia.base import Base
+
+
+class Sesion(Base):
+    __tablename__ = "sesion"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuario.id"))
+    fecha_hora_inicio: Mapped[datetime]
+    fecha_hora_fin: Mapped[datetime | None]
+
+    usuario: Mapped["Usuario"] = relationship()
 
     def get_usuario(self):
-        pass
+        return self.usuario
 
-    def get_fecha_hora_inicio(self):
-        pass
-
-    def set_fecha_hora_inicio(self, fecha):
-        pass
-
-    def get_fecha_hora_fin(self):
-        pass
+    def obtener_empleado(self):
+        return self.usuario.get_empleado()
 
     def set_fecha_hora_fin(self, fecha):
-        pass
+        self.fecha_hora_fin = fecha

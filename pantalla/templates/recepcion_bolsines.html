@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}Recepción de bolsín{% endblock %}
+{% block pasos %}{% with paso_actual = 1 %}{% include "_pasos.html" %}{% endwith %}{% endblock %}
+{% block contenido %}
+<h1>Registrar recepción de bolsín</h1>
+<p class="cm-actual">Comisión médica destino: <strong>{{ cm }}</strong></p>
+
+{% if not hay_enviados %}
+  <div class="vacio">
+    <span>📭</span>
+    <h2>No hay bolsines enviados hacia {{ cm }}</h2>
+    <p>Cuando el correo despache un bolsín para esta comisión médica aparecerá en este listado.</p>
+    <a class="boton boton-primario" href="{{ url_for('inicio') }}">Volver al inicio</a>
+  </div>
+{% else %}
+  <form class="filtros tarjeta" method="get">
+    <label>N° de precinto
+      <input name="precinto" value="{{ filtro_precinto }}" placeholder="Ej.: PR-48213">
+    </label>
+    <label>CM de origen
+      <select name="cm_origen">
+        <option value="">Todas</option>
+        {% for id, nombre in cms_origen %}
+        <option value="{{ id }}" {% if filtro_cm == id %}selected{% endif %}>{{ nombre }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="filtros-acciones">
+      <button class="boton boton-secundario" type="submit">Buscar</button>
+      {% if filtro_precinto or filtro_cm %}
+        <a class="boton boton-fantasma" href="{{ url_for('recepcion.mostrar_bolsines') }}">Limpiar</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if not bolsines %}
+    <div class="alerta alerta-error" role="alert">
+      {% if filtro_precinto %}No se encuentra bolsín con el número de precinto «{{ filtro_precinto }}».
+      {% else %}No se encuentra bolsín enviado con la CM de origen seleccionada.{% endif %}
+    </div>
+  {% else %}
+    <p class="ayuda">Seleccioná el bolsín que recibiste ({{ bolsines|length }} en camino hacia esta CM).</p>
+    <div class="lista-bolsines">
+      {% for b in bolsines %}
+      <form class="tarjeta bolsin" method="post" action="{{ url_for('recepcion.tomar_seleccion_bolsin') }}">
+        <input type="hidden" name="bolsin_id" value="{{ b.id }}">
+        <div class="bolsin-precinto">
+          <small>Precinto</small>
+          <strong>{{ b.precinto }}</strong>
+        </div>
+        <div class="bolsin-datos">
+          <span>Bolsín N° {{ b.numero }}</span>
+          <span>Origen: <strong>{{ b.cm_origen }}</strong></span>
+          <span>{{ b.cantidad_remitos }} remito{{ 's' if b.cantidad_remitos != 1 }} · armado el {{ b.fecha|fecha }}</span>
+        </div>
+        <button class="boton boton-primario" type="submit">Seleccionar</button>
+      </form>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

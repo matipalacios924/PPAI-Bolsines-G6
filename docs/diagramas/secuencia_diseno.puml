@@ -1,0 +1,72 @@
+@startuml secuencia_diseno
+title CU 28 - Vista dinámica de diseño: registro de la recepción con patrón State\n(pasos 10 a 12 del flujo; se muestra la opción "contenido igual al registrado")
+autonumber
+skinparam sequenceMessageAlign left
+
+actor "EB" as EB
+boundary ":PantallaRecepcionBolsin" as P
+control ":GestorRecepcionBolsin" as G
+entity "bolsinSel:Bolsin" as B
+entity "actualCEB:CambioEstadoBolsin" as CEB
+entity "nuevoCEB:CambioEstadoBolsin" as NCEB
+entity ":Remito" as R
+entity ":DetalleRemito" as DR
+entity ":Documentacion" as D
+entity "enviado:EnBolsinEnviado" as EBE
+entity "actualCED:CambioEstadoDocumentacion" as CED
+entity "aceptada:RecibidaYAceptada" as RYA
+entity "nuevoCED:CambioEstadoDocumentacion" as NCED
+boundary ":InterfazNotificacion" as IN
+
+EB -> P : tomarConfirmacion()
+P -> G : tomarConfirmacion(true)
+G -> G : registrarRecepcion()
+G -> G : obtenerFechaHoraActual()
+G -> G : buscarEstado(esAmbitoBolsin, esRecibidoEnCMDestino)
+G -> G : buscarEstado(esAmbitoRemito, esRecibidoYAceptado)
+
+G -> B : recibir(estadoRecibido, fechaHora, empleado)
+B -> B : obtenerCambioEstadoActual()
+loop por cada CambioEstadoBolsin
+  B -> CEB : sosActual()
+end
+B -> CEB : setFechaHoraFin(fechaHora)
+B -> B : crearCambioEstadoBolsin(estadoRecibido, fechaHora, empleado)
+B -> NCEB ** : new(estadoRecibido, fechaHora, empleado)
+
+loop por cada remito del bolsín
+  G -> R : registrarRecepcion(situaciones, areas, fechaHora, empleado, estAceptado, estParcial)
+  loop por cada DetalleRemito
+    R -> DR : getDocumentacion()
+    R -> DR : actualizarEstadoDoc(ACEPTADA, null, fechaHora, empleado)
+    DR -> D : aceptar(fechaHora, empleado)
+    D -> EBE : aceptar(self, fechaHora, empleado)
+    EBE -> RYA ** : new()
+    EBE -> EBE : cambiarEstado(doc, aceptada, fechaHora, empleado)
+    EBE -> EBE : buscarCambioEstadoActual(doc)
+    EBE -> D : getCambiosEstado()
+    loop por cada CambioEstadoDocumentacion
+      EBE -> CED : sosActual()
+    end
+    EBE -> CED : setFechaHoraFin(fechaHora)
+    EBE -> EBE : crearCambioEstado(aceptada, fechaHora, empleado)
+    EBE -> NCED ** : new(aceptada, fechaHora, empleado)
+    EBE -> D : agregarCambioEstado(nuevoCED)
+    EBE -> D : setEstado(aceptada)
+  end
+  loop por cada documentación del remito
+    R -> D : fueRecibidaCorrectamente()
+    D -> RYA : esRecibidaCorrectamente()
+  end
+  R -> R : setEstado(estAceptado)
+end
+
+G -> G : notificarRecepcion()
+note right of G : se incluye CU 29\nNotificar recepción de bolsín
+loop por cada CM de origen
+  G -> IN : enviarNotificacion(email, asunto, cuerpo)
+end
+G -> G : obtenerResultado()
+P -> P : mostrarResultado()
+G -> G : finCU()
+@enduml

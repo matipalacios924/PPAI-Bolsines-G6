@@ -1,0 +1,39 @@
+@startuml maquina_estados_documentacion
+title Máquina de estados de Documentación
+
+[*] --> Registrada : registrar()\n[CU 7 Registrar Documentación]
+
+Registrada --> EnRemito : incluirEnRemito()\n[CU 15 Generar Remito / CU 16 Modificar Remito]
+Registrada --> DeBaja : darDeBaja()\n[CU 9 Eliminar Documentación]
+
+EnRemito --> Registrada : quitarDeRemito()\n[CU 16 Modificar Remito / CU 17 Cancelar Remito]
+EnRemito --> EnBolsinSaliente : asignarABolsin()\n[CU 19 Generar Bolsín / CU 20 Modificar Bolsín]
+
+EnBolsinSaliente --> EnRemito : quitarDeBolsin()\n[CU 20 Modificar Bolsín / CU 21 Eliminar Bolsín]
+EnBolsinSaliente --> EnBolsinEnviado : comenzarTraslado()\n[CU 27 Registrar retiro de bolsines]
+
+EnBolsinEnviado --> RecibidaYAceptada : aceptar()\n[CU 28] [contenido igual o doc. no afectada]
+EnBolsinEnviado --> NoRecibida : asignarNoRecibida()\n[CU 28] [doc. no llegó en el bolsín]
+EnBolsinEnviado --> RecibidaYRechazada : rechazar()\n[CU 28] [doc. no corresponde al destino]
+EnBolsinEnviado --> ParaRedirigir : redirigir()\n[CU 28] [CM destino es la CMC]
+
+ParaRedirigir --> RecibidaYAceptada : aceptar()\n[área de la CMC la acepta]
+ParaRedirigir --> RecibidaYRechazada : rechazar()\n[no corresponde al área]
+
+NoRecibida --> Registrada : reasignar()\n[CU 31 Registrar Revisión de Documentación]
+NoRecibida --> DeBaja : darDeBaja()\n[CU 31]
+RecibidaYRechazada --> Registrada : reasignar()\n[CU 31]
+RecibidaYRechazada --> DeBaja : darDeBaja()\n[CU 31]
+
+RecibidaYAceptada --> [*]
+DeBaja --> [*]
+
+state "En remito" as EnRemito
+state "En bolsín saliente" as EnBolsinSaliente
+state "En bolsín enviado" as EnBolsinEnviado
+state "Para redirigir" as ParaRedirigir
+state "Recibida y aceptada" as RecibidaYAceptada
+state "No recibida" as NoRecibida
+state "Recibida y rechazada" as RecibidaYRechazada
+state "De baja" as DeBaja
+@enduml

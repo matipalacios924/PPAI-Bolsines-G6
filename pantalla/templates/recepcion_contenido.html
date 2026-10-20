@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block titulo %}Controlar contenido{% endblock %}
+{% block pasos %}{% with paso_actual = 2 %}{% include "_pasos.html" %}{% endwith %}{% endblock %}
+{% block contenido %}
+<h1>Controlar contenido del bolsín</h1>
+<div class="resumen-bolsin tarjeta">
+  <div><small>Bolsín</small><strong>N° {{ bolsin.numero }}</strong></div>
+  <div><small>Precinto</small><strong>{{ bolsin.precinto }}</strong></div>
+  <div><small>Origen</small><strong>{{ bolsin.cm_origen }}</strong></div>
+  <div><small>Destino</small><strong>{{ cm }}</strong></div>
+  <a class="enlace" href="{{ url_for('recepcion.mostrar_bolsines') }}">Cambiar bolsín</a>
+</div>
+
+{% for error in errores %}
+  <div class="alerta alerta-error" role="alert">{{ error }}</div>
+{% endfor %}
+
+<form method="post" id="form-recepcion">
+  <fieldset class="tarjeta opciones">
+    <legend>¿Cómo llegó el contenido?</legend>
+    <p class="ayuda">Compará lo que recibiste físicamente con lo registrado y elegí la situación.</p>
+    {% for o in opciones %}
+    <label class="opcion {% if not o.habilitada %}deshabilitada{% endif %}">
+      <input type="radio" name="opcion" value="{{ o.numero }}" required
+             {% if not o.habilitada %}disabled{% endif %}
+             {% if opcion_elegida == o.numero %}checked{% endif %}>
+      <span>{{ o.descripcion }}
+        {% if not o.habilitada %}<small>Sólo disponible para la Comisión Médica Central.</small>{% endif %}
+      </span>
+    </label>
+    {% endfor %}
+  </fieldset>
+
+  <p class="ayuda instruccion" id="instruccion" hidden></p>
+
+  {% for r in remitos %}
+  <section class="tarjeta remito">
+    <h2>Remito N° {{ r.numero }} <small>{{ r.documentacion|length }} documento{{ 's' if r.documentacion|length != 1 }}</small></h2>
+    <table>
+      <thead>
+        <tr>
+          <th class="col-marca">Afectada</th>
+          <th>N°</th><th>Tipo</th><th>Asunto</th>
+          <th class="col-area">Área destino (CMC)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in r.documentacion %}
+        <tr>
+          <td class="col-marca">
+            <input type="checkbox" name="docs" value="{{ d.id }}" aria-label="Marcar documentación {{ d.numero }}"
+                   {% if d.id in marcados %}checked{% endif %}>
+          </td>
+          <td>{{ d.numero }}</td>
+          <td><span class="chip">{{ d.tipo }}</span></td>
+          <td>{{ d.asunto }}</td>
+          <td class="col-area">
+            <input name="area_{{ d.id }}" value="{{ areas.get(d.id, '') }}" placeholder="Ej.: Asuntos Legales"
+                   list="areas-cmc">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endfor %}
+  <datalist id="areas-cmc">
+    <option value="Asuntos Legales"><option value="Auditoría Médica"><option value="Mesa de Entradas">
+    <option value="Recursos Humanos"><option value="Dirección Médica">
+  </datalist>
+
+  <div class="acciones">
+    <button class="boton boton-primario" type="submit">Continuar</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const instrucciones = {
+    "2": "Marcá la documentación que NO llegó en el bolsín.",
+    "3": "Marcá la documentación que no corresponde a esta comisión médica.",
+    "4": "Marcá la documentación a redirigir e indicá el área de la sede central."
+  };
+  const form = document.getElementById("form-recepcion");
+  const texto = document.getElementById("instruccion");
+  function actualizar() {
+    const elegida = form.querySelector("input[name=opcion]:checked");
+    const valor = elegida ? elegida.value : null;
+    const marcar = valor && valor !== "1";
+    document.querySelectorAll(".col-marca").forEach(c => c.hidden = !marcar);
+    document.querySelectorAll(".col-area").forEach(c => c.hidden = valor !== "4");
+    texto.hidden = !marcar;
+    texto.textContent = marcar ? instrucciones[valor] : "";
+  }
+  form.addEventListener("change", actualizar);
+  actualizar();
+</script>
+{% endblock %}

@@ -4,9 +4,10 @@ autonumber
 skinparam sequenceMessageAlign left
 
 actor "EB" as EB
-boundary ":PantallaRecepcionBolsin" as P
-control ":GestorRecepcionBolsin" as G
-entity "bolsinSel:Bolsin" as B
+boundary ":PantallaRegRecBolsin" as P
+control ":GestorRegRecepBolsin" as G
+entity ":Estado" as E
+entity "seleccionado:Bolsin" as B
 entity "actualCEB:CambioEstadoBolsin" as CEB
 entity "nuevoCEB:CambioEstadoBolsin" as NCEB
 entity ":Remito" as R
@@ -20,45 +21,54 @@ boundary ":InterfazNotificacion" as IN
 
 EB -> P : tomarConfirmacion()
 P -> G : tomarConfirmacion(true)
-G -> G : registrarRecepcion()
 G -> G : obtenerFechaHoraActual()
-G -> G : buscarEstado(esAmbitoBolsin, esRecibidoEnCMDestino)
-G -> G : buscarEstado(esAmbitoRemito, esRecibidoYAceptado)
+G -> G : buscarEstadoRecibidoEnCMDestino()
+loop mientras haya estados
+  G -> E : esAmbitoBolsin()
+  G -> E : esRecibidoEnCMDestino()
+end
+G -> G : buscarEstadoRecibidoYAceptadoRemito()
+loop mientras haya estados
+  G -> E : esAmbitoRemito()
+  G -> E : esRecibidoYAceptado()
+end
+G -> G : buscarEstadoRecibidoYAceptadoParcialRemito()
+note right of G : mismo recorrido con
+esRecibidoYAceptadoParcial()
 
-G -> B : recibir(estadoRecibido, fechaHora, empleado)
+G -> G : setBolsinEstadoRecibido()
+G -> B : recibirBolsin(estadoRecibido, situaciones, areas, fechaHora, empleado, estAceptado, estParcial)
 B -> B : obtenerCambioEstadoActual()
 loop por cada CambioEstadoBolsin
   B -> CEB : sosActual()
 end
 B -> CEB : setFechaHoraFin(fechaHora)
+B -> B : setBolsinEstadoRecibido(estadoRecibido, fechaHora, empleado)
 B -> B : crearCambioEstadoBolsin(estadoRecibido, fechaHora, empleado)
 B -> NCEB ** : new(estadoRecibido, fechaHora, empleado)
 
 loop por cada remito del bolsín
-  G -> R : registrarRecepcion(situaciones, areas, fechaHora, empleado, estAceptado, estParcial)
+  B -> R : recibirYAceptar(situaciones, areas, fechaHora, empleado, estAceptado, estParcial)
+  R -> R : setEstadoRecibidaYAceptada(situaciones, estAceptado, estParcial)
   loop por cada DetalleRemito
     R -> DR : getDocumentacion()
     R -> DR : actualizarEstadoDoc(ACEPTADA, null, fechaHora, empleado)
     DR -> D : aceptar(fechaHora, empleado)
     D -> EBE : aceptar(self, fechaHora, empleado)
-    EBE -> RYA ** : new()
-    EBE -> EBE : cambiarEstado(doc, aceptada, fechaHora, empleado)
+    EBE -> EBE : cambiarEstado(doc, RecibidaYAceptada, fechaHora, empleado)
     EBE -> EBE : buscarCambioEstadoActual(doc)
     EBE -> D : getCambiosEstado()
     loop por cada CambioEstadoDocumentacion
       EBE -> CED : sosActual()
     end
     EBE -> CED : setFechaHoraFin(fechaHora)
+    EBE -> EBE : crearSigEstado(RecibidaYAceptada)
+    EBE -> RYA ** : new()
     EBE -> EBE : crearCambioEstado(aceptada, fechaHora, empleado)
     EBE -> NCED ** : new(aceptada, fechaHora, empleado)
     EBE -> D : agregarCambioEstado(nuevoCED)
-    EBE -> D : setEstado(aceptada)
+    EBE -> D : setEstadoActual(aceptada)
   end
-  loop por cada documentación del remito
-    R -> D : fueRecibidaCorrectamente()
-    D -> RYA : esRecibidaCorrectamente()
-  end
-  R -> R : setEstado(estAceptado)
 end
 
 G -> G : notificarRecepcion()

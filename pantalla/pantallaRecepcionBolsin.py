@@ -4,7 +4,7 @@ import uuid
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from dominio.estadoDocumentacion import TransicionNoPermitidaError
-from gestor.gestorRecepcionBolsin import OPCION_CONTENIDO_IGUAL, GestorRecepcionBolsin
+from gestor.gestorRecepcionBolsin import OPCION_CONTENIDO_IGUAL, GestorRegRecepBolsin
 from interfaz.interfazNotificacion import InterfazNotificacion
 from pantalla.app import login_requerido
 from persistencia.base import SessionLocal
@@ -12,10 +12,10 @@ from persistencia.base import SessionLocal
 bp = Blueprint("recepcion", __name__, url_prefix="/recepcion-bolsin")
 
 # Un gestor por ejecución del caso de uso (vive entre requests HTTP).
-_gestores: dict[str, GestorRecepcionBolsin] = {}
+_gestores: dict[str, GestorRegRecepBolsin] = {}
 
 
-class PantallaRecepcionBolsin:
+class PantallaRegRecBolsin:
     # ---------------------------------------------------------------- auxiliares
     def _gestor(self):
         return _gestores.get(session.get("cu28_id"))
@@ -32,7 +32,7 @@ class PantallaRecepcionBolsin:
     # -------------------------------------------------------------- paso 1
     def opcion_registrar_recepcion_bolsin(self):
         self._finalizar_gestor()
-        gestor = GestorRecepcionBolsin(SessionLocal(), session["sesion_id"], InterfazNotificacion())
+        gestor = GestorRegRecepBolsin(SessionLocal(), session["sesion_id"], InterfazNotificacion())
         gestor.nueva_recepcion_bolsin()
         session["cu28_id"] = uuid.uuid4().hex
         _gestores[session["cu28_id"]] = gestor
@@ -131,7 +131,7 @@ class PantallaRecepcionBolsin:
         return redirect(url_for("inicio"))
 
 
-pantalla = PantallaRecepcionBolsin()
+pantalla = PantallaRegRecBolsin()
 bp.add_url_rule("/", "opcion_registrar_recepcion_bolsin",
                 login_requerido(pantalla.opcion_registrar_recepcion_bolsin))
 bp.add_url_rule("/bolsines", "mostrar_bolsines", login_requerido(pantalla.mostrar_bolsines))

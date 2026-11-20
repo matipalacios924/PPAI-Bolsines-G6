@@ -4,7 +4,7 @@ skinparam classAttributeIconSize 0
 skinparam linetype ortho
 hide empty members
 
-class PantallaRecepcionBolsin <<boundary>> {
+class PantallaRegRecBolsin <<boundary>> {
   + opcionRegistrarRecepcionBolsin() : void
   + mostrarBolsines() : void
   + tomarSeleccionBolsin() : void
@@ -15,7 +15,7 @@ class PantallaRecepcionBolsin <<boundary>> {
   + cancelar() : void
 }
 
-class GestorRecepcionBolsin <<control>> {
+class GestorRegRecepBolsin <<control>> {
   - cmUsuarioLogueado : ComisionMedica
   - empleadoLogueado : Empleado
   - bolsinesEnviados : List<Bolsin>
@@ -33,7 +33,10 @@ class GestorRecepcionBolsin <<control>> {
   + obtenerOpcionesRecepcion() : List<Map>
   + tomarOpcionRecepcion(opcion : int, docs : List<int>, areas : Map<int, String>) : List<String>
   + tomarConfirmacion(confirma : boolean) : Map
-  + registrarRecepcion() : void
+  + buscarEstadoRecibidoEnCMDestino(estados) : Estado
+  + buscarEstadoRecibidoYAceptadoRemito(estados) : Estado
+  + buscarEstadoRecibidoYAceptadoParcialRemito(estados) : Estado
+  + setBolsinEstadoRecibido() : void
   + notificarRecepcion() : void
   + obtenerFechaHoraActual() : DateTime
   + finCU() : void
@@ -79,7 +82,8 @@ class Bolsin {
   + getNroPrecinto() : String
   + getCMOrigen() : ComisionMedica
   + obtenerRemitos() : List<Remito>
-  + recibir(estado : Estado, fechaHora : DateTime, responsable : Empleado) : void
+  + recibirBolsin(estadoRecibido : Estado, situaciones : Map, areas : Map, fechaHora : DateTime, responsable : Empleado, estadoAceptado : Estado, estadoParcial : Estado) : void
+  + setBolsinEstadoRecibido(estado : Estado, fechaHora : DateTime, responsable : Empleado) : void
   - obtenerCambioEstadoActual() : CambioEstadoBolsin
   - crearCambioEstadoBolsin(estado : Estado, fechaHora : DateTime, responsable : Empleado) : void
 }
@@ -105,7 +109,8 @@ class Remito {
   - fecha : Date
   + getNumero() : int
   + buscarDocumentacion() : List<Documentacion>
-  + registrarRecepcion(situaciones : Map, areas : Map, fechaHora : DateTime, responsable : Empleado, estadoAceptado : Estado, estadoParcial : Estado) : void
+  + recibirYAceptar(situaciones : Map, areas : Map, fechaHora : DateTime, responsable : Empleado, estadoAceptado : Estado, estadoParcial : Estado) : void
+  + setEstadoRecibidaYAceptada(situaciones : Map, estadoAceptado : Estado, estadoParcial : Estado) : void
   + setEstado(estado : Estado) : void
 }
 class DetalleRemito {
@@ -123,7 +128,7 @@ class Documentacion <<Context>> {
   + mostrarTipoDocumentacion() : String
   + getCambiosEstado() : List<CambioEstadoDocumentacion>
   + agregarCambioEstado(ce : CambioEstadoDocumentacion) : void
-  + setEstado(estado : EstadoDocumentacion) : void
+  + setEstadoActual(estado : EstadoDocumentacion) : void
   + fueRecibidaCorrectamente() : boolean
   + aceptar(fechaHora : DateTime, responsable : Empleado) : void
   + asignarNoRecibida(fechaHora : DateTime, responsable : Empleado) : void
@@ -154,9 +159,10 @@ abstract class EstadoDocumentacion <<State>> {
   + redirigir(doc : Documentacion, fh : DateTime, resp : Empleado) : void
   + reasignar(doc : Documentacion, fh : DateTime, resp : Empleado) : void
   + darDeBaja(doc : Documentacion, fh : DateTime, resp : Empleado) : void
-  # cambiarEstado(doc : Documentacion, proximo : EstadoDocumentacion, fh : DateTime, resp : Empleado) : void
-  # buscarCambioEstadoActual(doc : Documentacion) : CambioEstadoDocumentacion
-  # crearCambioEstado(estado : EstadoDocumentacion, fh : DateTime, resp : Empleado) : CambioEstadoDocumentacion
+  + cambiarEstado(doc : Documentacion, claseSigEstado, fh : DateTime, resp : Empleado) : void
+  + buscarCambioEstadoActual(doc : Documentacion) : CambioEstadoDocumentacion
+  + crearSigEstado(claseSigEstado) : EstadoDocumentacion
+  + crearCambioEstado(estado : EstadoDocumentacion, fh : DateTime, resp : Empleado) : CambioEstadoDocumentacion
 }
 class Registrada <<ConcreteState>> {
   + incluirEnRemito(...) : void
@@ -201,11 +207,11 @@ enum SituacionRecepcion {
   REDIRIGIR
 }
 
-PantallaRecepcionBolsin --> GestorRecepcionBolsin
-GestorRecepcionBolsin --> InterfazNotificacion
-GestorRecepcionBolsin --> Sesion : sesionActual
-GestorRecepcionBolsin --> "0..*" Bolsin : bolsinesEnviados
-GestorRecepcionBolsin ..> SituacionRecepcion
+PantallaRegRecBolsin --> GestorRegRecepBolsin
+GestorRegRecepBolsin --> InterfazNotificacion
+GestorRegRecepBolsin --> Sesion : sesionActual
+GestorRegRecepBolsin --> "0..*" Bolsin : bolsinesEnviados
+GestorRegRecepBolsin ..> SituacionRecepcion
 Sesion --> "1" Usuario
 Usuario --> "1" Empleado
 Empleado --> "1" ComisionMedica : asignadoA

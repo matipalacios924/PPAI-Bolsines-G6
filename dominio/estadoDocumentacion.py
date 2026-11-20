@@ -79,21 +79,26 @@ class EstadoDocumentacion(ABC):
             f"No se puede {accion} una documentación en estado '{self.nombre}'."
         )
 
-    def _cambiar_estado(self, documentacion, proximo_estado, fecha_hora, responsable):
-        cambio_estado_actual = self._buscar_cambio_estado_actual(documentacion)
+    def cambiar_estado(self, documentacion, clase_sig_estado, fecha_hora, responsable):
+        """Cierra el cambio de estado actual, crea el siguiente estado y su cambio de estado."""
+        cambio_estado_actual = self.buscar_cambio_estado_actual(documentacion)
         if cambio_estado_actual is not None:
             cambio_estado_actual.set_fecha_hora_fin(fecha_hora)
-        nuevo_cambio_estado = self._crear_cambio_estado(proximo_estado, fecha_hora, responsable)
+        sig_estado = self.crear_sig_estado(clase_sig_estado)
+        nuevo_cambio_estado = self.crear_cambio_estado(sig_estado, fecha_hora, responsable)
         documentacion.agregar_cambio_estado(nuevo_cambio_estado)
-        documentacion.set_estado(proximo_estado)
+        documentacion.set_estado_actual(sig_estado)
 
-    def _buscar_cambio_estado_actual(self, documentacion):
+    def buscar_cambio_estado_actual(self, documentacion):
         for cambio_estado in documentacion.get_cambios_estado():
             if cambio_estado.sos_actual():
                 return cambio_estado
         return None
 
-    def _crear_cambio_estado(self, estado, fecha_hora, responsable):
+    def crear_sig_estado(self, clase_sig_estado):
+        return clase_sig_estado()
+
+    def crear_cambio_estado(self, estado, fecha_hora, responsable):
         from dominio.cambioEstadoDocumentacion import CambioEstadoDocumentacion
 
         return CambioEstadoDocumentacion(
@@ -115,49 +120,49 @@ class Registrada(EstadoDocumentacion):
 
     def registrar(self, documentacion, fecha_hora, responsable):
         """Estado inicial: se crea el primer cambio de estado."""
-        self._cambiar_estado(documentacion, self, fecha_hora, responsable)
+        self.cambiar_estado(documentacion, Registrada, fecha_hora, responsable)
 
     def incluir_en_remito(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, EnRemito(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, EnRemito, fecha_hora, responsable)
 
     def dar_de_baja(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, DeBaja(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, DeBaja, fecha_hora, responsable)
 
 
 class EnRemito(EstadoDocumentacion):
     nombre = "En remito"
 
     def quitar_de_remito(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, Registrada(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, Registrada, fecha_hora, responsable)
 
     def asignar_a_bolsin(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, EnBolsinSaliente(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, EnBolsinSaliente, fecha_hora, responsable)
 
 
 class EnBolsinSaliente(EstadoDocumentacion):
     nombre = "En bolsín saliente"
 
     def quitar_de_bolsin(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, EnRemito(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, EnRemito, fecha_hora, responsable)
 
     def comenzar_traslado(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, EnBolsinEnviado(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, EnBolsinEnviado, fecha_hora, responsable)
 
 
 class EnBolsinEnviado(EstadoDocumentacion):
     nombre = "En bolsín enviado"
 
     def aceptar(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, RecibidaYAceptada(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, RecibidaYAceptada, fecha_hora, responsable)
 
     def asignar_no_recibida(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, NoRecibida(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, NoRecibida, fecha_hora, responsable)
 
     def rechazar(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, RecibidaYRechazada(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, RecibidaYRechazada, fecha_hora, responsable)
 
     def redirigir(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, ParaRedirigir(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, ParaRedirigir, fecha_hora, responsable)
 
 
 class ParaRedirigir(EstadoDocumentacion):
@@ -168,10 +173,10 @@ class ParaRedirigir(EstadoDocumentacion):
         return True
 
     def aceptar(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, RecibidaYAceptada(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, RecibidaYAceptada, fecha_hora, responsable)
 
     def rechazar(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, RecibidaYRechazada(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, RecibidaYRechazada, fecha_hora, responsable)
 
 
 class RecibidaYAceptada(EstadoDocumentacion):
@@ -185,20 +190,20 @@ class NoRecibida(EstadoDocumentacion):
     nombre = "No recibida"
 
     def reasignar(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, Registrada(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, Registrada, fecha_hora, responsable)
 
     def dar_de_baja(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, DeBaja(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, DeBaja, fecha_hora, responsable)
 
 
 class RecibidaYRechazada(EstadoDocumentacion):
     nombre = "Recibida y rechazada"
 
     def reasignar(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, Registrada(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, Registrada, fecha_hora, responsable)
 
     def dar_de_baja(self, documentacion, fecha_hora, responsable):
-        self._cambiar_estado(documentacion, DeBaja(), fecha_hora, responsable)
+        self.cambiar_estado(documentacion, DeBaja, fecha_hora, responsable)
 
 
 class DeBaja(EstadoDocumentacion):

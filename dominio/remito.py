@@ -49,14 +49,18 @@ class Remito(Base):
     def tomar_documentacion(self, detalle):
         self.detalles_remito.append(detalle)
 
-    def registrar_recepcion(self, situaciones, areas, fecha_hora, responsable,
-                            estado_aceptado, estado_aceptado_parcial):
+    def recibir_y_aceptar(self, situaciones, areas, fecha_hora, responsable,
+                          estado_aceptado, estado_aceptado_parcial):
+        self.set_estado_recibida_y_aceptada(situaciones, estado_aceptado, estado_aceptado_parcial)
         for detalle in self.detalles_remito:
             doc = detalle.get_documentacion()
             situacion = situaciones.get(doc.id, SituacionRecepcion.ACEPTADA)
             detalle.actualizar_estado_doc(situacion, areas.get(doc.id), fecha_hora, responsable)
 
-        if all(doc.fue_recibida_correctamente() for doc in self.buscar_documentacion()):
-            self.set_estado(estado_aceptado)
-        else:
-            self.set_estado(estado_aceptado_parcial)
+    def set_estado_recibida_y_aceptada(self, situaciones, estado_aceptado, estado_aceptado_parcial):
+        """Recibido y aceptado si toda su documentación llega bien; si no, aceptado parcial."""
+        todas_ok = all(
+            situaciones.get(doc.id, SituacionRecepcion.ACEPTADA).es_recibida_correctamente()
+            for doc in self.buscar_documentacion()
+        )
+        self.set_estado(estado_aceptado if todas_ok else estado_aceptado_parcial)

@@ -11,7 +11,7 @@ from dominio import Bolsin, Documentacion, Sesion, Usuario  # noqa: E402
 from dominio.estadoDocumentacion import (EnBolsinEnviado, NoRecibida, ParaRedirigir,  # noqa: E402
                                          RecibidaYAceptada, RecibidaYRechazada, Registrada,
                                          TransicionNoPermitidaError)
-from gestor.gestorRecepcionBolsin import GestorRecepcionBolsin  # noqa: E402
+from gestor.gestorRecepcionBolsin import GestorRegRecepBolsin  # noqa: E402
 from interfaz.interfazNotificacion import InterfazNotificacion  # noqa: E402
 from pantalla.app import create_app  # noqa: E402
 
@@ -29,7 +29,7 @@ class BaseRecepcion(unittest.TestCase):
             db.add(sesion)
             db.commit()
             sesion_id = sesion.id
-        gestor = GestorRecepcionBolsin(SessionLocal(), sesion_id, InterfazNotificacion(self.carpeta_mails))
+        gestor = GestorRegRecepBolsin(SessionLocal(), sesion_id, InterfazNotificacion(self.carpeta_mails))
         gestor.nueva_recepcion_bolsin()
         return gestor
 

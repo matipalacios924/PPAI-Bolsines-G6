@@ -45,7 +45,7 @@ class Documentacion(Base):
     def get_estado(self):
         return self.estado
 
-    def set_estado(self, estado):
+    def set_estado_actual(self, estado):
         self.estado = estado
 
     def get_cambios_estado(self):

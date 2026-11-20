@@ -73,8 +73,8 @@ Como referencia, la máquina de estados de Documentación en la que se basa la j
 
 | Modelo | Código |
 |---|---|
-| Boundary `PantallaRecepcionBolsin` | `pantalla/pantallaRecepcionBolsin.py` + plantillas `pantalla/templates/recepcion_*.html` |
-| Control `GestorRecepcionBolsin` | `gestor/gestorRecepcionBolsin.py` |
+| Boundary `PantallaRegRecBolsin` | `pantalla/pantallaRecepcionBolsin.py` + plantillas `pantalla/templates/recepcion_*.html` |
+| Control `GestorRegRecepBolsin` | `gestor/gestorRecepcionBolsin.py` |
 | Boundary `InterfazNotificacion` (CU 29) | `interfaz/interfazNotificacion.py` |
 | Entidades | `dominio/*.py` |
 | Patrón State | `dominio/estadoDocumentacion.py` (contexto en `dominio/documentacion.py`) |

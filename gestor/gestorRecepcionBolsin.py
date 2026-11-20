@@ -26,7 +26,7 @@ SITUACION_POR_OPCION = {
 }
 
 
-class GestorRecepcionBolsin:
+class GestorRegRecepBolsin:
     def __init__(self, db, sesion_id, interfaz_notificacion):
         self.db = db
         self.sesion_actual = db.get(Sesion, sesion_id)
@@ -39,6 +39,9 @@ class GestorRecepcionBolsin:
         self.situaciones = {}
         self.areas = {}
         self.fecha_hora_actual = None
+        self.estado_recibido = None
+        self.estado_rem_aceptado = None
+        self.estado_rem_parcial = None
         self.notificaciones_enviadas = []
 
     # ------------------------------------------------------------- pasos 1 a 4
@@ -173,26 +176,43 @@ class GestorRecepcionBolsin:
         if not confirma:  # A6: el EB no confirma, vuelve a elegir la opción
             self._limpiar_opcion()
             return None
-        self.registrar_recepcion()
-        self.notificar_recepcion()
-        return self.obtener_resultado()
-
-    def registrar_recepcion(self):
         self.fecha_hora_actual = self.obtener_fecha_hora_actual()
         estados = self.db.scalars(select(Estado)).all()
-        estado_recibido = self._buscar_estado(estados, Estado.es_ambito_bolsin, Estado.es_recibido_en_cm_destino)
-        estado_rem_aceptado = self._buscar_estado(estados, Estado.es_ambito_remito, Estado.es_recibido_y_aceptado)
-        estado_rem_parcial = self._buscar_estado(estados, Estado.es_ambito_remito,
-                                                 Estado.es_recibido_y_aceptado_parcial)
+        self.estado_recibido = self.buscar_estado_recibido_en_cm_destino(estados)
+        self.estado_rem_aceptado = self.buscar_estado_recibido_y_aceptado_remito(estados)
+        self.estado_rem_parcial = self.buscar_estado_recibido_y_aceptado_parcial_remito(estados)
         try:
-            self.bolsin_seleccionado.recibir(estado_recibido, self.fecha_hora_actual, self.empleado_logueado)
-            for remito in self.bolsin_seleccionado.obtener_remitos():
-                remito.registrar_recepcion(self.situaciones, self.areas, self.fecha_hora_actual,
-                                           self.empleado_logueado, estado_rem_aceptado, estado_rem_parcial)
+            self.set_bolsin_estado_recibido()
             self.db.commit()
         except TransicionNoPermitidaError:
             self.db.rollback()
             raise
+        self.notificar_recepcion()
+        return self.obtener_resultado()
+
+    def buscar_estado_recibido_en_cm_destino(self, estados):
+        for estado in estados:
+            if estado.es_ambito_bolsin() and estado.es_recibido_en_cm_destino():
+                return estado
+        return None
+
+    def buscar_estado_recibido_y_aceptado_remito(self, estados):
+        for estado in estados:
+            if estado.es_ambito_remito() and estado.es_recibido_y_aceptado():
+                return estado
+        return None
+
+    def buscar_estado_recibido_y_aceptado_parcial_remito(self, estados):
+        for estado in estados:
+            if estado.es_ambito_remito() and estado.es_recibido_y_aceptado_parcial():
+                return estado
+        return None
+
+    def set_bolsin_estado_recibido(self):
+        self.bolsin_seleccionado.recibir_bolsin(
+            self.estado_recibido, self.situaciones, self.areas, self.fecha_hora_actual,
+            self.empleado_logueado, self.estado_rem_aceptado, self.estado_rem_parcial,
+        )
 
     def notificar_recepcion(self):
         """Incluye al CU 29: un mail a cada CM de origen de la documentación recibida."""
@@ -253,7 +273,3 @@ class GestorRecepcionBolsin:
         self.opcion_recepcion = None
         self.situaciones = {}
         self.areas = {}
-
-    @staticmethod
-    def _buscar_estado(estados, es_ambito, es_estado):
-        return next(e for e in estados if es_ambito(e) and es_estado(e))

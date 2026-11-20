@@ -60,10 +60,21 @@ class Bolsin(Base):
     def asociar_remito(self, remito):
         self.remitos.append(remito)
 
-    def recibir(self, estado_recibido, fecha_hora, responsable):
-        self.cambiar_estado(estado_recibido, fecha_hora, responsable)
+    def recibir_bolsin(self, estado_recibido, situaciones, areas, fecha_hora, responsable,
+                       estado_rem_aceptado, estado_rem_parcial):
+        actual = self.obtener_cambio_estado_actual()
+        if actual is not None:
+            actual.set_fecha_hora_fin(fecha_hora)
+        self.set_bolsin_estado_recibido(estado_recibido, fecha_hora, responsable)
+        for remito in self.remitos:
+            remito.recibir_y_aceptar(situaciones, areas, fecha_hora, responsable,
+                                     estado_rem_aceptado, estado_rem_parcial)
+
+    def set_bolsin_estado_recibido(self, estado_recibido, fecha_hora, responsable):
+        self.crear_cambio_estado_bolsin(estado_recibido, fecha_hora, responsable)
 
     def cambiar_estado(self, estado, fecha_hora, responsable):
+        """Transición genérica (la usan otros CU y la carga de datos de prueba)."""
         actual = self.obtener_cambio_estado_actual()
         if actual is not None:
             actual.set_fecha_hora_fin(fecha_hora)

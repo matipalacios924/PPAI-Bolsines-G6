@@ -1,7 +1,6 @@
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from dominio.situacionRecepcion import SituacionRecepcion
 from persistencia.base import Base
 
 
@@ -21,14 +20,18 @@ class DetalleRemito(Base):
     def get_area_cmc_destino(self):
         return self.area_cmc_destino
 
-    def actualizar_estado_doc(self, situacion, area, fecha_hora, responsable):
-        doc = self.documentacion
-        if situacion is SituacionRecepcion.ACEPTADA:
-            doc.aceptar(fecha_hora, responsable)
-        elif situacion is SituacionRecepcion.NO_RECIBIDA:
-            doc.asignar_no_recibida(fecha_hora, responsable)
-        elif situacion is SituacionRecepcion.RECHAZADA:
-            doc.rechazar(fecha_hora, responsable)
-        elif situacion is SituacionRecepcion.REDIRIGIR:
-            self.area_cmc_destino = area
-            doc.redirigir(fecha_hora, responsable)
+    def set_area_cmc_destino(self, area):
+        self.area_cmc_destino = area
+
+    def aceptar_documentacion(self, fecha_hora, responsable):
+        self.documentacion.aceptar(fecha_hora, responsable)
+
+    def asignar_no_recibida_documentacion(self, fecha_hora, responsable):
+        self.documentacion.asignar_no_recibida(fecha_hora, responsable)
+
+    def rechazar_documentacion(self, fecha_hora, responsable):
+        self.documentacion.rechazar(fecha_hora, responsable)
+
+    def redirigir_documentacion(self, area, fecha_hora, responsable):
+        self.set_area_cmc_destino(area)
+        self.documentacion.redirigir(fecha_hora, responsable)

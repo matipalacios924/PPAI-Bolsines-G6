@@ -10,7 +10,7 @@ class CambioEstadoBolsin(Base):
     __tablename__ = "cambio_estado_bolsin"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    bolsin_id: Mapped[int] = mapped_column(ForeignKey("bolsin.id"))
+    numero_bolsin: Mapped[int] = mapped_column(ForeignKey("bolsin.numero_bolsin"))
     estado_id: Mapped[int] = mapped_column(ForeignKey("estado.id"))
     fecha_hora_inicio: Mapped[datetime]
     fecha_hora_fin: Mapped[datetime | None]

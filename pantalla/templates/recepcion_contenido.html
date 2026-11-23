@@ -48,14 +48,14 @@
         {% for d in r.documentacion %}
         <tr>
           <td class="col-marca">
-            <input type="checkbox" name="docs" value="{{ d.id }}" aria-label="Marcar documentación {{ d.numero }}"
-                   {% if d.id in marcados %}checked{% endif %}>
+            <input type="checkbox" name="docs" value="{{ d.numero }}" aria-label="Marcar documentación {{ d.numero }}"
+                   {% if d.numero in marcados %}checked{% endif %}>
           </td>
           <td>{{ d.numero }}</td>
           <td><span class="chip">{{ d.tipo }}</span></td>
           <td>{{ d.asunto }}</td>
           <td class="col-area">
-            <input name="area_{{ d.id }}" value="{{ areas.get(d.id, '') }}" placeholder="Ej.: Asuntos Legales"
+            <input name="area_{{ d.numero }}" value="{{ areas.get(d.numero, '') }}" placeholder="Ej.: Asuntos Legales"
                    list="areas-cmc">
           </td>
         </tr>

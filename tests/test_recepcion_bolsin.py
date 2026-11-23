@@ -29,16 +29,14 @@ class BaseRecepcion(unittest.TestCase):
             db.add(sesion)
             db.commit()
             sesion_id = sesion.id
-        gestor = GestorRegRecepBolsin(SessionLocal(), sesion_id, InterfazNotificacion(self.carpeta_mails))
-        gestor.nueva_recepcion_bolsin()
-        return gestor
+        return GestorRegRecepBolsin(SessionLocal(), sesion_id, InterfazNotificacion(self.carpeta_mails))
 
     def docs_del_bolsin(self, gestor):
-        return [d["id"] for r in gestor.buscar_remitos_y_documentacion() for d in r["documentacion"]]
+        return [d["numero"] for r in gestor.buscar_remitos_y_documentacion() for d in r["documentacion"]]
 
-    def estado_doc(self, doc_id):
+    def estado_doc(self, nro_doc):
         with SessionLocal() as db:
-            return db.get(Documentacion, doc_id).get_estado()
+            return db.query(Documentacion).filter_by(numero=nro_doc).one().get_estado()
 
 
 class TestPatronState(BaseRecepcion):
@@ -65,7 +63,7 @@ class TestGestorRecepcion(BaseRecepcion):
     def test_flujo_principal_contenido_igual(self):
         gestor = self.crear_gestor("eb.cordoba")
         self.assertEqual(len(gestor.bolsines_enviados), 3)
-        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].id)
+        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].get_numero_bolsin())
         docs = self.docs_del_bolsin(gestor)
         self.assertEqual(gestor.tomar_opcion_recepcion(1), [])
         resultado = gestor.tomar_confirmacion(True)
@@ -76,11 +74,17 @@ class TestGestorRecepcion(BaseRecepcion):
             self.assertEqual(self.estado_doc(doc_id), RecibidaYAceptada())
         self.assertEqual(len(resultado["notificaciones"]), 1)
         with SessionLocal() as db:
-            self.assertFalse(db.get(Bolsin, gestor.bolsin_seleccionado.id).esta_enviado())
+            self.assertFalse(db.get(Bolsin, gestor.bolsin_seleccionado.get_numero_bolsin()).esta_enviado())
+
+    def test_constructor_popula_atributos_desde_bd(self):
+        gestor = self.crear_gestor("eb.cordoba")
+        self.assertEqual(gestor.cm_usuario_logueado.get_codigo(), "CBA")
+        self.assertEqual(len(gestor.bolsines_enviados), 3)
+        self.assertTrue(gestor.estado_recibido.es_recibido_en_cm_destino())
 
     def test_a3_documentacion_no_recibida(self):
         gestor = self.crear_gestor("eb.cordoba")
-        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].id)
+        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].get_numero_bolsin())
         faltante = self.docs_del_bolsin(gestor)[0]
         self.assertEqual(gestor.tomar_opcion_recepcion(2, [faltante]), [])
         resultado = gestor.tomar_confirmacion(True)
@@ -90,7 +94,7 @@ class TestGestorRecepcion(BaseRecepcion):
 
     def test_a4_documentacion_no_corresponde(self):
         gestor = self.crear_gestor("eb.cordoba")
-        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[1].id)
+        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[1].get_numero_bolsin())
         rechazada = self.docs_del_bolsin(gestor)[1]
         self.assertEqual(gestor.tomar_opcion_recepcion(3, [rechazada]), [])
         gestor.tomar_confirmacion(True)
@@ -98,12 +102,12 @@ class TestGestorRecepcion(BaseRecepcion):
 
     def test_a5_redirigir_solo_cmc(self):
         gestor = self.crear_gestor("eb.cordoba")
-        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].id)
+        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].get_numero_bolsin())
         doc = self.docs_del_bolsin(gestor)[0]
         self.assertTrue(gestor.tomar_opcion_recepcion(4, [doc], {doc: "Legales"}))
 
         gestor = self.crear_gestor("eb.cmc")
-        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].id)
+        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].get_numero_bolsin())
         doc = self.docs_del_bolsin(gestor)[0]
         self.assertTrue(gestor.tomar_opcion_recepcion(4, [doc], {}))  # falta el área
         self.assertEqual(gestor.tomar_opcion_recepcion(4, [doc], {doc: "Asuntos Legales"}), [])
@@ -113,7 +117,7 @@ class TestGestorRecepcion(BaseRecepcion):
 
     def test_a6_no_confirma(self):
         gestor = self.crear_gestor("eb.cordoba")
-        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].id)
+        gestor.tomar_seleccion_bolsin(gestor.bolsines_enviados[0].get_numero_bolsin())
         docs = self.docs_del_bolsin(gestor)
         gestor.tomar_opcion_recepcion(1)
         self.assertIsNone(gestor.tomar_confirmacion(False))
@@ -128,8 +132,8 @@ class TestGestorRecepcion(BaseRecepcion):
         gestor = self.crear_gestor("eb.cordoba")
         self.assertEqual(len(gestor.obtener_datos_bolsines("PR-50177")), 1)
         self.assertEqual(gestor.obtener_datos_bolsines("NO-EXISTE"), [])
-        cm_id = gestor.bolsines_enviados[0].get_cm_origen().id
-        self.assertEqual(len(gestor.obtener_datos_bolsines("", cm_id)), 1)
+        codigo_cm = gestor.bolsines_enviados[0].get_cm_origen().get_codigo()
+        self.assertEqual(len(gestor.obtener_datos_bolsines("", codigo_cm)), 1)
 
 
 class TestPantalla(BaseRecepcion):
@@ -142,16 +146,20 @@ class TestPantalla(BaseRecepcion):
         self.assertIn("PR-48213", r.get_data(as_text=True))
         r = cliente.get("/recepcion-bolsin/bolsines?precinto=XYZ")
         self.assertIn("No se encuentra bolsín con el número de precinto", r.get_data(as_text=True))
-        cliente.post("/recepcion-bolsin/bolsines", data={"bolsin_id": 1})
+        with SessionLocal() as db:
+            bolsin = db.query(Bolsin).filter_by(numero_precinto="PR-48213").one()
+            numero_bolsin = bolsin.get_numero_bolsin()
+            nro_doc = bolsin.obtener_remitos()[0].buscar_documentacion()[0].get_numero()
+        cliente.post("/recepcion-bolsin/bolsines", data={"numero_bolsin": numero_bolsin})
         r = cliente.post("/recepcion-bolsin/contenido", data={"opcion": 2})
         self.assertIn("Marque la documentación afectada", r.get_data(as_text=True))
-        r = cliente.post("/recepcion-bolsin/contenido", data={"opcion": 2, "docs": ["1"]})
+        r = cliente.post("/recepcion-bolsin/contenido", data={"opcion": 2, "docs": [str(nro_doc)]})
         self.assertEqual(r.status_code, 302)
         r = cliente.post("/recepcion-bolsin/confirmar", data={"confirma": "si"})
         texto = r.get_data(as_text=True)
         self.assertIn("Recepción registrada", texto)
         self.assertIn("cm.ros@organismo.gob.ar", texto)
-        self.assertEqual(self.estado_doc(1), NoRecibida())
+        self.assertEqual(self.estado_doc(nro_doc), NoRecibida())
 
 
 if __name__ == "__main__":

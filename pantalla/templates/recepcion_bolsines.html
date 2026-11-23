@@ -20,8 +20,8 @@
     <label>CM de origen
       <select name="cm_origen">
         <option value="">Todas</option>
-        {% for id, nombre in cms_origen %}
-        <option value="{{ id }}" {% if filtro_cm == id %}selected{% endif %}>{{ nombre }}</option>
+        {% for codigo, nombre in cms_origen %}
+        <option value="{{ codigo }}" {% if filtro_cm == codigo %}selected{% endif %}>{{ nombre }}</option>
         {% endfor %}
       </select>
     </label>
@@ -43,7 +43,7 @@
     <div class="lista-bolsines">
       {% for b in bolsines %}
       <form class="tarjeta bolsin" method="post" action="{{ url_for('recepcion.tomar_seleccion_bolsin') }}">
-        <input type="hidden" name="bolsin_id" value="{{ b.id }}">
+        <input type="hidden" name="numero_bolsin" value="{{ b.numero }}">
         <div class="bolsin-precinto">
           <small>Precinto</small>
           <strong>{{ b.precinto }}</strong>

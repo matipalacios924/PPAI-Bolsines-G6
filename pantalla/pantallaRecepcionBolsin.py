@@ -32,8 +32,8 @@ class PantallaRegRecBolsin:
     # -------------------------------------------------------------- paso 1
     def opcion_registrar_recepcion_bolsin(self):
         self._finalizar_gestor()
+        # Al crearse, el gestor busca la CM del usuario logueado, los bolsines enviados y los estados.
         gestor = GestorRegRecepBolsin(SessionLocal(), session["sesion_id"], InterfazNotificacion())
-        gestor.nueva_recepcion_bolsin()
         session["cu28_id"] = uuid.uuid4().hex
         _gestores[session["cu28_id"]] = gestor
         return redirect(url_for("recepcion.mostrar_bolsines"))
@@ -44,7 +44,7 @@ class PantallaRegRecBolsin:
         if gestor is None:
             return self._sin_gestor()
         precinto = request.args.get("precinto", "").strip()
-        cm_origen = request.args.get("cm_origen", type=int)
+        cm_origen = request.args.get("cm_origen", "").strip() or None
         bolsines = gestor.obtener_datos_bolsines(precinto, cm_origen)
         return render_template(
             "recepcion_bolsines.html",
@@ -62,7 +62,7 @@ class PantallaRegRecBolsin:
         if gestor is None:
             return self._sin_gestor()
         try:
-            gestor.tomar_seleccion_bolsin(request.form.get("bolsin_id", type=int))
+            gestor.tomar_seleccion_bolsin(request.form.get("numero_bolsin", type=int))
         except ValueError as error:
             flash(str(error), "error")
             return redirect(url_for("recepcion.mostrar_bolsines"))

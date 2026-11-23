@@ -23,7 +23,7 @@
         <td><span class="chip">{{ d.tipo }}</span></td>
         <td>{{ d.asunto }}</td>
         <td>
-          <span class="estado estado-{{ d.situacion.name|lower }}">{{ d.situacion.value }}</span>
+          <span class="estado estado-{{ d.vista_previa[1] }}">{{ d.vista_previa[0] }}</span>
           {% if d.area %}<small>→ {{ d.area }}</small>{% endif %}
         </td>
       </tr>

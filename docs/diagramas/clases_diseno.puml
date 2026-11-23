@@ -21,23 +21,28 @@ class GestorRegRecepBolsin <<control>> {
   - bolsinesEnviados : List<Bolsin>
   - bolsinSeleccionado : Bolsin
   - opcionRecepcion : int
-  - situaciones : Map<int, SituacionRecepcion>
-  - areas : Map<int, String>
+  - documentacionAfectada : List<Documentacion>
+  - areas : Map<Documentacion, String>
+  - estadoRecibido : Estado
+  - estadoRemAceptado : Estado
+  - estadoRemParcial : Estado
   - fechaHoraActual : DateTime
-  + nuevaRecepcionBolsin() : void
+  + GestorRegRecepBolsin(sesionId : int, interfaz : InterfazNotificacion)
   + buscarCMUsuarioLogueado() : String
   + buscarBolsinesEnviados() : List<Bolsin>
-  + obtenerDatosBolsines(nroPrecinto : String, cmOrigenId : int) : List<Map>
-  + tomarSeleccionBolsin(bolsinId : int) : void
+  + buscarEstadoRecibidoEnCMDestino(estados : List<Estado>) : Estado
+  + buscarEstadoRecibidoYAceptadoRemito(estados : List<Estado>) : Estado
+  + buscarEstadoRecibidoYAceptadoParcialRemito(estados : List<Estado>) : Estado
+  + obtenerDatosBolsines(nroPrecinto : String, codigoCMOrigen : String) : List<Map>
+  + tomarSeleccionBolsin(numeroBolsin : int) : void
   + buscarRemitosYDocumentacion() : List<Map>
   + obtenerOpcionesRecepcion() : List<Map>
-  + tomarOpcionRecepcion(opcion : int, docs : List<int>, areas : Map<int, String>) : List<String>
+  + tomarOpcionRecepcion(opcion : int, nrosDoc : List<int>, areas : Map<int, String>) : List<String>
   + tomarConfirmacion(confirma : boolean) : Map
-  + buscarEstadoRecibidoEnCMDestino(estados) : Estado
-  + buscarEstadoRecibidoYAceptadoRemito(estados) : Estado
-  + buscarEstadoRecibidoYAceptadoParcialRemito(estados) : Estado
   + setBolsinEstadoRecibido() : void
+  + registrarDocumentacionAfectada() : void
   + notificarRecepcion() : void
+  + obtenerResultado() : Map
   + obtenerFechaHoraActual() : DateTime
   + finCU() : void
 }
@@ -69,6 +74,7 @@ class ComisionMedica {
   - email : String
   + getNombre() : String
   + getEmail() : String
+  + getCodigo() : String
   + esCentral() : boolean
 }
 
@@ -79,13 +85,16 @@ class Bolsin {
   - peso : int
   + esTuCMDestino(cm : ComisionMedica) : boolean
   + estaEnviado() : boolean
+  + getNumeroBolsin() : int
   + getNroPrecinto() : String
   + getCMOrigen() : ComisionMedica
   + obtenerRemitos() : List<Remito>
-  + recibirBolsin(estadoRecibido : Estado, situaciones : Map, areas : Map, fechaHora : DateTime, responsable : Empleado, estadoAceptado : Estado, estadoParcial : Estado) : void
+  + recibirBolsin(estadoRecibido : Estado, documentacionAfectada : List<Documentacion>, fechaHora : DateTime, responsable : Empleado) : void
+  + actualizarEstadoRemitos(estadoAceptado : Estado, estadoParcial : Estado) : void
   + setBolsinEstadoRecibido(estado : Estado, fechaHora : DateTime, responsable : Empleado) : void
   - obtenerCambioEstadoActual() : CambioEstadoBolsin
   - crearCambioEstadoBolsin(estado : Estado, fechaHora : DateTime, responsable : Empleado) : void
+  - agregarCambioEstado(ce : CambioEstadoBolsin) : void
 }
 class CambioEstadoBolsin {
   - fechaHoraInicio : DateTime
@@ -109,14 +118,21 @@ class Remito {
   - fecha : Date
   + getNumero() : int
   + buscarDocumentacion() : List<Documentacion>
-  + recibirYAceptar(situaciones : Map, areas : Map, fechaHora : DateTime, responsable : Empleado, estadoAceptado : Estado, estadoParcial : Estado) : void
-  + setEstadoRecibidaYAceptada(situaciones : Map, estadoAceptado : Estado, estadoParcial : Estado) : void
+  + recibirYAceptar(excepto : List<Documentacion>, fechaHora : DateTime, responsable : Empleado) : void
+  + asignarNoRecibidaDocumentacion(docs : List<Documentacion>, fechaHora : DateTime, responsable : Empleado) : void
+  + rechazarDocumentacion(docs : List<Documentacion>, fechaHora : DateTime, responsable : Empleado) : void
+  + redirigirDocumentacion(docs : List<Documentacion>, areas : Map<Documentacion, String>, fechaHora : DateTime, responsable : Empleado) : void
+  + setEstadoRecibidaYAceptada(estadoAceptado : Estado, estadoParcial : Estado) : void
   + setEstado(estado : Estado) : void
 }
 class DetalleRemito {
   - areaCMCDestino : String
   + getDocumentacion() : Documentacion
-  + actualizarEstadoDoc(situacion : SituacionRecepcion, area : String, fechaHora : DateTime, responsable : Empleado) : void
+  + setAreaCMCDestino(area : String) : void
+  + aceptarDocumentacion(fechaHora : DateTime, responsable : Empleado) : void
+  + asignarNoRecibidaDocumentacion(fechaHora : DateTime, responsable : Empleado) : void
+  + rechazarDocumentacion(fechaHora : DateTime, responsable : Empleado) : void
+  + redirigirDocumentacion(area : String, fechaHora : DateTime, responsable : Empleado) : void
 }
 
 class Documentacion <<Context>> {
@@ -200,18 +216,11 @@ class RecibidaYRechazada <<ConcreteState>> {
 }
 class DeBaja <<ConcreteState>>
 
-enum SituacionRecepcion {
-  ACEPTADA
-  NO_RECIBIDA
-  RECHAZADA
-  REDIRIGIR
-}
-
 PantallaRegRecBolsin --> GestorRegRecepBolsin
 GestorRegRecepBolsin --> InterfazNotificacion
 GestorRegRecepBolsin --> Sesion : sesionActual
 GestorRegRecepBolsin --> "0..*" Bolsin : bolsinesEnviados
-GestorRegRecepBolsin ..> SituacionRecepcion
+GestorRegRecepBolsin --> "3" Estado : estadosRecepcion
 Sesion --> "1" Usuario
 Usuario --> "1" Empleado
 Empleado --> "1" ComisionMedica : asignadoA

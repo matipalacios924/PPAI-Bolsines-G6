@@ -10,8 +10,7 @@ from persistencia.base import Base
 class Bolsin(Base):
     __tablename__ = "bolsin"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    numero_bolsin: Mapped[int] = mapped_column(unique=True)
+    numero_bolsin: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
     numero_precinto: Mapped[str | None] = mapped_column(String(30))
     fecha: Mapped[date]
     peso: Mapped[int]
@@ -60,15 +59,17 @@ class Bolsin(Base):
     def asociar_remito(self, remito):
         self.remitos.append(remito)
 
-    def recibir_bolsin(self, estado_recibido, situaciones, areas, fecha_hora, responsable,
-                       estado_rem_aceptado, estado_rem_parcial):
+    def recibir_bolsin(self, estado_recibido, documentacion_afectada, fecha_hora, responsable):
         actual = self.obtener_cambio_estado_actual()
         if actual is not None:
             actual.set_fecha_hora_fin(fecha_hora)
         self.set_bolsin_estado_recibido(estado_recibido, fecha_hora, responsable)
         for remito in self.remitos:
-            remito.recibir_y_aceptar(situaciones, areas, fecha_hora, responsable,
-                                     estado_rem_aceptado, estado_rem_parcial)
+            remito.recibir_y_aceptar(documentacion_afectada, fecha_hora, responsable)
+
+    def actualizar_estado_remitos(self, estado_rem_aceptado, estado_rem_parcial):
+        for remito in self.remitos:
+            remito.set_estado_recibida_y_aceptada(estado_rem_aceptado, estado_rem_parcial)
 
     def set_bolsin_estado_recibido(self, estado_recibido, fecha_hora, responsable):
         self.crear_cambio_estado_bolsin(estado_recibido, fecha_hora, responsable)
@@ -81,6 +82,10 @@ class Bolsin(Base):
         self.crear_cambio_estado_bolsin(estado, fecha_hora, responsable)
 
     def crear_cambio_estado_bolsin(self, estado, fecha_hora, responsable):
-        self.cambios_estado.append(
-            CambioEstadoBolsin(estado=estado, fecha_hora_inicio=fecha_hora, responsable_ce=responsable)
+        nuevo_cambio_estado = CambioEstadoBolsin(
+            estado=estado, fecha_hora_inicio=fecha_hora, responsable_ce=responsable
         )
+        self.agregar_cambio_estado(nuevo_cambio_estado)
+
+    def agregar_cambio_estado(self, cambio_estado):
+        self.cambios_estado.append(cambio_estado)

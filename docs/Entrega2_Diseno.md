@@ -39,7 +39,7 @@ Se aplica **State**: el comportamiento que depende del estado se delega en un ob
   4. lo agrega a la documentación y actualiza su estado actual.
 - Además, el estado responde preguntas que dependen de él. Por ejemplo, `esRecibidaCorrectamente()` vale *true* en `RecibidaYAceptada` y `ParaRedirigir`. `Remito` lo usa para decidir entre *Recibido y aceptado* y *Recibido y aceptado parcial* sin preguntar por nombres de estado.
 
-**Beneficios en este CU:** el gestor ya no decide estados de la documentación. Sólo traduce la opción que elige el EB a una `SituacionRecepcion` por documento, y `DetalleRemito` invoca el evento correspondiente (`aceptar`, `asignarNoRecibida`, `rechazar` o `redirigir`). Agregar un estado o una transición nueva implica agregar o modificar una sola clase, lo que cumple con el principio abierto/cerrado.
+**Beneficios en este CU:** el gestor ya no decide estados de la documentación. Ningún método recibe por parámetro la situación o el estado destino: cada mensaje *es* el evento de la máquina de estados (`aceptarDocumentacion` → `aceptar`, `asignarNoRecibidaDocumentacion` → `asignarNoRecibida`, `rechazarDocumentacion` → `rechazar`, `redirigirDocumentacion` → `redirigir`) y el **próximo estado lo decide el estado concreto actual** de cada documentación. La opción del EB sólo indica qué evento disparar sobre la documentación que marcó (flujos A3, A4 y A5); en el flujo descripto toda la documentación recibe `aceptar()`. Agregar un estado o una transición nueva implica agregar o modificar una sola clase, lo que cumple con el principio abierto/cerrado.
 
 **Alcance:** los estados de `Bolsin` y `Remito` se siguen modelando con la entidad `Estado` del modelo de dominio, ya que su máquina de estados corresponde a los grupos impares.
 
@@ -51,7 +51,7 @@ Fuente: [`diagramas/clases_diseno.puml`](diagramas/clases_diseno.puml). Incluye 
 
 ## 3. Vista dinámica (diagrama de secuencia de diseño)
 
-Fuente: [`diagramas/secuencia_diseno.puml`](diagramas/secuencia_diseno.puml). Modela los pasos 10 a 12 del flujo descripto, que es la parte del escenario que cambia por aplicar el patrón: el gestor registra la recepción y la documentación transiciona de `EnBolsinEnviado` a `RecibidaYAceptada` delegando en el objeto estado.
+Fuente: [`diagramas/secuencia_diseno.puml`](diagramas/secuencia_diseno.puml). Muestra primero la creación del gestor (su constructor busca en la BD la CM del usuario logueado, los bolsines enviados y los estados que usa la recepción) y luego modela los pasos 10 a 12 del flujo descripto, con parámetros y retornos de cada mensaje, que es la parte del escenario que cambia por aplicar el patrón: el gestor registra la recepción y la documentación transiciona de `EnBolsinEnviado` a `RecibidaYAceptada` delegando en el objeto estado.
 
 Como referencia, la máquina de estados de Documentación en la que se basa la jerarquía State está en [`diagramas/maquina_estados_documentacion.puml`](diagramas/maquina_estados_documentacion.puml).
 

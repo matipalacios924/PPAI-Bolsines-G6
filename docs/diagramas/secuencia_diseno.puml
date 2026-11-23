@@ -1,11 +1,14 @@
 @startuml secuencia_diseno
-title CU 28 - Vista dinámica de diseño: registro de la recepción con patrón State\n(pasos 10 a 12 del flujo; se muestra la opción "contenido igual al registrado")
+title CU 28 - Vista dinámica de diseño: registro de la recepción con patrón State\n(creación del gestor y pasos 10 a 12 del flujo; opción "contenido igual al registrado")
 autonumber
 skinparam sequenceMessageAlign left
 
 actor "EB" as EB
 boundary ":PantallaRegRecBolsin" as P
 control ":GestorRegRecepBolsin" as G
+entity "sesionActual:Sesion" as S
+entity "empleadoLogueado:Empleado" as EMP
+entity ":Bolsin" as BS
 entity ":Estado" as E
 entity "seleccionado:Bolsin" as B
 entity "actualCEB:CambioEstadoBolsin" as CEB
@@ -19,64 +22,115 @@ entity "aceptada:RecibidaYAceptada" as RYA
 entity "nuevoCED:CambioEstadoDocumentacion" as NCED
 boundary ":InterfazNotificacion" as IN
 
-EB -> P : tomarConfirmacion()
-P -> G : tomarConfirmacion(true)
-G -> G : obtenerFechaHoraActual()
-G -> G : buscarEstadoRecibidoEnCMDestino()
+== Pasos 1 a 3: el constructor del gestor popula sus atributos desde la BD ==
+EB -> P : opcionRegistrarRecepcionBolsin()
+P -> G ** : new(sesionId, interfazNotificacion)
+G -> G : buscarCMUsuarioLogueado()
+G -> S : obtenerEmpleado()
+S --> G : empleadoLogueado
+G -> EMP : getCM()
+EMP --> G : cmUsuarioLogueado
+G -> G : buscarBolsinesEnviados()
+loop mientras haya bolsines
+  G -> BS : esTuCMDestino(cmUsuarioLogueado)
+  BS --> G : boolean
+  G -> BS : estaEnviado()
+  BS --> G : boolean
+end
+G --> G : bolsinesEnviados
+G -> G : buscarEstadoRecibidoEnCMDestino(estados)
 loop mientras haya estados
   G -> E : esAmbitoBolsin()
+  E --> G : boolean
   G -> E : esRecibidoEnCMDestino()
+  E --> G : boolean
 end
-G -> G : buscarEstadoRecibidoYAceptadoRemito()
+G --> G : estadoRecibido
+G -> G : buscarEstadoRecibidoYAceptadoRemito(estados)
 loop mientras haya estados
   G -> E : esAmbitoRemito()
+  E --> G : boolean
   G -> E : esRecibidoYAceptado()
+  E --> G : boolean
 end
-G -> G : buscarEstadoRecibidoYAceptadoParcialRemito()
-note right of G : mismo recorrido con
-esRecibidoYAceptadoParcial()
+G --> G : estadoRemAceptado
+G -> G : buscarEstadoRecibidoYAceptadoParcialRemito(estados)
+note right of G : mismo recorrido con\nesAmbitoRemito() y esRecibidoYAceptadoParcial()
+G --> G : estadoRemParcial
+G --> P : gestor creado
+P -> P : mostrarBolsines()
+
+== Pasos 10 a 12: confirmación y registro de la recepción ==
+EB -> P : tomarConfirmacion()
+P -> G : tomarConfirmacion(confirma = true)
+G -> G : obtenerFechaHoraActual()
+G --> G : fechaHoraActual
 
 G -> G : setBolsinEstadoRecibido()
-G -> B : recibirBolsin(estadoRecibido, situaciones, areas, fechaHora, empleado, estAceptado, estParcial)
+G -> B : recibirBolsin(estadoRecibido, documentacionAfectada, fechaHoraActual, empleadoLogueado)
 B -> B : obtenerCambioEstadoActual()
 loop por cada CambioEstadoBolsin
   B -> CEB : sosActual()
+  CEB --> B : boolean
 end
-B -> CEB : setFechaHoraFin(fechaHora)
-B -> B : setBolsinEstadoRecibido(estadoRecibido, fechaHora, empleado)
-B -> B : crearCambioEstadoBolsin(estadoRecibido, fechaHora, empleado)
-B -> NCEB ** : new(estadoRecibido, fechaHora, empleado)
+B --> B : actualCEB
+B -> CEB : setFechaHoraFin(fechaHoraActual)
+B -> B : setBolsinEstadoRecibido(estadoRecibido, fechaHoraActual, empleadoLogueado)
+B -> B : crearCambioEstadoBolsin(estadoRecibido, fechaHoraActual, empleadoLogueado)
+B -> NCEB ** : new(estadoRecibido, fechaHoraActual, empleadoLogueado)
+B -> B : agregarCambioEstado(nuevoCEB)
 
 loop por cada remito del bolsín
-  B -> R : recibirYAceptar(situaciones, areas, fechaHora, empleado, estAceptado, estParcial)
-  R -> R : setEstadoRecibidaYAceptada(situaciones, estAceptado, estParcial)
-  loop por cada DetalleRemito
+  B -> R : recibirYAceptar(documentacionAfectada, fechaHoraActual, empleadoLogueado)
+  loop por cada DetalleRemito no afectado
     R -> DR : getDocumentacion()
-    R -> DR : actualizarEstadoDoc(ACEPTADA, null, fechaHora, empleado)
-    DR -> D : aceptar(fechaHora, empleado)
-    D -> EBE : aceptar(self, fechaHora, empleado)
-    EBE -> EBE : cambiarEstado(doc, RecibidaYAceptada, fechaHora, empleado)
-    EBE -> EBE : buscarCambioEstadoActual(doc)
+    DR --> R : documentacion
+    R -> DR : aceptarDocumentacion(fechaHoraActual, empleadoLogueado)
+    DR -> D : aceptar(fechaHoraActual, empleadoLogueado)
+    D -> EBE : aceptar(documentacion, fechaHoraActual, empleadoLogueado)
+    EBE -> EBE : cambiarEstado(documentacion, RecibidaYAceptada, fechaHoraActual, empleadoLogueado)
+    EBE -> EBE : buscarCambioEstadoActual(documentacion)
     EBE -> D : getCambiosEstado()
+    D --> EBE : cambiosEstado
     loop por cada CambioEstadoDocumentacion
       EBE -> CED : sosActual()
+      CED --> EBE : boolean
     end
-    EBE -> CED : setFechaHoraFin(fechaHora)
+    EBE --> EBE : actualCED
+    EBE -> CED : setFechaHoraFin(fechaHoraActual)
     EBE -> EBE : crearSigEstado(RecibidaYAceptada)
     EBE -> RYA ** : new()
-    EBE -> EBE : crearCambioEstado(aceptada, fechaHora, empleado)
-    EBE -> NCED ** : new(aceptada, fechaHora, empleado)
+    EBE --> EBE : aceptada
+    EBE -> EBE : crearCambioEstado(aceptada, fechaHoraActual, empleadoLogueado)
+    EBE -> NCED ** : new(aceptada, fechaHoraActual, empleadoLogueado)
+    EBE --> EBE : nuevoCED
     EBE -> D : agregarCambioEstado(nuevoCED)
     EBE -> D : setEstadoActual(aceptada)
   end
+end
+note right of G : en el flujo descripto documentacionAfectada está vacía,\nasí que no se ejecuta registrarDocumentacionAfectada()\n(flujos A3, A4 y A5)
+
+G -> B : actualizarEstadoRemitos(estadoRemAceptado, estadoRemParcial)
+loop por cada remito del bolsín
+  B -> R : setEstadoRecibidaYAceptada(estadoRemAceptado, estadoRemParcial)
+  loop por cada documentación del remito
+    R -> D : fueRecibidaCorrectamente()
+    D -> RYA : esRecibidaCorrectamente()
+    RYA --> D : true
+    D --> R : true
+  end
+  R -> R : setEstado(estadoRemAceptado)
 end
 
 G -> G : notificarRecepcion()
 note right of G : se incluye CU 29\nNotificar recepción de bolsín
 loop por cada CM de origen
-  G -> IN : enviarNotificacion(email, asunto, cuerpo)
+  G -> IN : enviarNotificacion(emailCMOrigen, asunto, cuerpo)
+  IN --> G : notificacion
 end
 G -> G : obtenerResultado()
-P -> P : mostrarResultado()
-G -> G : finCU()
+G --> G : resultado
+G --> P : resultado
+P -> P : mostrarResultado(resultado)
+P -> G : finCU()
 @enduml
